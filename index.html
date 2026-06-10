@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JP -> EN -> KR Translator</title>
+    <meta
+      name="description"
+      content="Japanese to English to Korean long text translator"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span>文</span>
+          </div>
+          <div>
+            <h1>JP -> EN -> KR 번역기</h1>
+            <p>10,000자 이상 장문 번역</p>
+          </div>
+        </div>
+        <div class="status-pill" aria-live="polite">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">대기</span>
+        </div>
+      </header>
+
+      <section class="settings-panel" aria-label="번역 설정">
+        <label class="field endpoint-field">
+          <span>API 엔드포인트</span>
+          <input
+            id="endpointInput"
+            type="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://libretranslate.com"
+          />
+        </label>
+
+        <label class="field key-field">
+          <span>API 키</span>
+          <input
+            id="apiKeyInput"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="선택"
+          />
+        </label>
+
+        <label class="field small-field">
+          <span>청크</span>
+          <input id="chunkSizeInput" type="number" min="500" max="5000" step="100" />
+        </label>
+
+        <label class="field small-field">
+          <span>대기(ms)</span>
+          <input id="delayInput" type="number" min="0" max="5000" step="50" />
+        </label>
+
+        <label class="field small-field">
+          <span>재시도</span>
+          <input id="retryInput" type="number" min="0" max="5" step="1" />
+        </label>
+
+        <label class="toggle-field">
+          <input id="saveKeyInput" type="checkbox" />
+          <span>키 저장</span>
+        </label>
+      </section>
+
+      <section class="action-row" aria-label="번역 실행">
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span id="stageText">입력 대기</span>
+            <span id="progressText">0%</span>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="command-group">
+          <button class="button secondary-button" id="loadButton" type="button">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="M17 8 12 3 7 8" />
+              <path d="M12 3v12" />
+            </svg>
+            불러오기
+          </button>
+          <button class="button primary-button" id="translateButton" type="button">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="m5 3 14 9-14 9V3Z" />
+            </svg>
+            번역
+          </button>
+          <button class="button danger-button" id="cancelButton" type="button" disabled>
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+              <rect x="6" y="6" width="12" height="12" rx="1" />
+            </svg>
+            중지
+          </button>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="text-panel">
+          <div class="panel-head">
+            <div>
+              <h2>일본어 원문</h2>
+              <span id="sourceCount">0자</span>
+            </div>
+            <div class="mini-actions">
+              <button class="icon-button" id="clearButton" type="button" aria-label="원문 지우기" title="원문 지우기">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4h8v2" />
+                  <path d="m19 6-1 14H6L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <textarea
+            id="sourceText"
+            class="text-box"
+            lang="ja"
+            spellcheck="false"
+            placeholder="日本語の文章を貼り付けてください。"
+          ></textarea>
+        </article>
+
+        <article class="text-panel output-panel">
+          <div class="panel-head">
+            <div>
+              <h2>한국어 결과</h2>
+              <span id="koreanCount">0자</span>
+            </div>
+            <div class="mini-actions">
+              <button class="icon-button" id="copyKoreanButton" type="button" aria-label="한국어 복사" title="한국어 복사">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+              <button class="icon-button" id="downloadButton" type="button" aria-label="한국어 저장" title="한국어 저장">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M7 10l5 5 5-5" />
+                  <path d="M12 15V3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <textarea
+            id="koreanText"
+            class="text-box"
+            lang="ko"
+            spellcheck="false"
+            readonly
+          ></textarea>
+        </article>
+
+        <article class="text-panel bridge-panel">
+          <div class="panel-head">
+            <div>
+              <h2>영어 중간본</h2>
+              <span id="englishCount">0자</span>
+            </div>
+            <div class="mini-actions">
+              <button class="icon-button" id="copyEnglishButton" type="button" aria-label="영어 복사" title="영어 복사">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <textarea
+            id="englishText"
+            class="text-box bridge-box"
+            lang="en"
+            spellcheck="false"
+            readonly
+          ></textarea>
+        </article>
+      </section>
+
+      <section class="log-panel" aria-label="진행 로그">
+        <div class="panel-head compact-head">
+          <div>
+            <h2>로그</h2>
+            <span id="chunkText">0개 청크</span>
+          </div>
+        </div>
+        <ol id="logList" class="log-list" aria-live="polite"></ol>
+      </section>
+    </main>
+
+    <input id="fileInput" type="file" accept=".txt,text/plain" hidden />
+    <script src="app.js"></script>
+  </body>
+</html>

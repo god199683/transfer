@@ -1,0 +1,507 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f7f2;
+  --surface: #ffffff;
+  --surface-alt: #f0f4f1;
+  --ink: #1d2521;
+  --muted: #64706a;
+  --line: #d9dfd7;
+  --teal: #007c74;
+  --teal-dark: #005f59;
+  --coral: #c54d42;
+  --amber: #d6931f;
+  --blue: #3f67b1;
+  --shadow: 0 18px 45px rgba(29, 37, 33, 0.09);
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(0, 124, 116, 0.08), transparent 32%),
+    linear-gradient(315deg, rgba(198, 77, 66, 0.08), transparent 28%),
+    var(--bg);
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+.app-shell {
+  width: min(1500px, calc(100vw - 32px));
+  min-height: calc(100vh - 32px);
+  margin: 16px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.topbar,
+.settings-panel,
+.action-row,
+.text-panel,
+.log-panel {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+}
+
+.topbar {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(140deg, var(--teal), var(--blue)),
+    var(--teal);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.brand-mark span {
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(1.15rem, 2.1vw, 1.8rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.brand p,
+.panel-head span,
+.progress-meta,
+.field span,
+.toggle-field,
+.log-list {
+  color: var(--muted);
+}
+
+.brand p {
+  margin-top: 5px;
+  font-size: 0.92rem;
+}
+
+.status-pill {
+  min-width: 104px;
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--surface-alt);
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+
+.status-dot.running {
+  background: var(--teal);
+  box-shadow: 0 0 0 5px rgba(0, 124, 116, 0.12);
+}
+
+.status-dot.error {
+  background: var(--coral);
+}
+
+.settings-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.5fr) minmax(170px, 0.9fr) repeat(3, minmax(96px, 0.42fr)) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+}
+
+.field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span,
+.toggle-field {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 11px;
+  outline: none;
+}
+
+.field input:focus,
+.text-box:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(0, 124, 116, 0.14);
+}
+
+.toggle-field {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-alt);
+  white-space: nowrap;
+}
+
+.toggle-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal);
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+}
+
+.progress-wrap {
+  min-width: 0;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5eae2;
+}
+
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--teal), var(--amber), var(--coral));
+  transition: width 180ms ease;
+}
+
+.command-group,
+.mini-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button,
+.icon-button {
+  min-height: 42px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease;
+}
+
+.button {
+  min-width: 0;
+  padding: 0 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+
+.button:hover:not(:disabled),
+.icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(29, 37, 33, 0.11);
+}
+
+.button:disabled,
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.primary-button {
+  color: #fff;
+  background: var(--teal);
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--teal-dark);
+}
+
+.secondary-button {
+  color: var(--ink);
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+}
+
+.danger-button {
+  color: #fff;
+  background: var(--coral);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 18px;
+}
+
+.workspace-grid {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(420px, 1fr) minmax(190px, 0.42fr);
+  gap: 14px;
+}
+
+.text-panel,
+.log-panel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bridge-panel {
+  grid-column: 1 / -1;
+}
+
+.panel-head {
+  min-height: 58px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.compact-head {
+  min-height: 48px;
+}
+
+h2 {
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.panel-head span {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+}
+
+.text-box {
+  width: 100%;
+  flex: 1;
+  min-height: 280px;
+  resize: none;
+  border: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 16px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.94);
+  outline: none;
+  line-height: 1.68;
+  font-size: 1rem;
+}
+
+.text-box[readonly] {
+  background: #fbfcfa;
+}
+
+.bridge-box {
+  min-height: 130px;
+}
+
+.log-panel {
+  max-height: 180px;
+}
+
+.log-list {
+  min-height: 86px;
+  margin: 0;
+  padding: 10px 16px 14px 36px;
+  overflow: auto;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.log-list li + li {
+  margin-top: 5px;
+}
+
+@media (max-width: 1100px) {
+  .settings-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .endpoint-field,
+  .key-field {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    width: min(100vw - 20px, 1500px);
+    min-height: calc(100vh - 20px);
+    margin: 10px auto;
+  }
+
+  .topbar,
+  .action-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .topbar {
+    display: flex;
+  }
+
+  .status-pill {
+    width: 100%;
+  }
+
+  .settings-panel,
+  .action-row,
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-panel {
+    gap: 10px;
+  }
+
+  .endpoint-field,
+  .key-field {
+    grid-column: auto;
+  }
+
+  .command-group {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .button {
+    width: 100%;
+    padding: 0 8px;
+  }
+
+  .workspace-grid {
+    grid-template-rows: auto;
+  }
+
+  .bridge-panel {
+    grid-column: auto;
+  }
+
+  .text-box {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 460px) {
+  .brand {
+    align-items: flex-start;
+  }
+
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .command-group {
+    grid-template-columns: 1fr;
+  }
+}
