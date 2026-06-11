@@ -369,8 +369,16 @@ async function runTranslation() {
     return;
   }
 
-  const supported = await checkTranslatorSupport();
-  if (!supported) return;
+  if (!getTranslatorApi()) {
+    setStatus("미지원", "error");
+    setEngineState(
+      "이 브라우저는 내장 번역을 지원하지 않습니다.",
+      "데스크톱 Chrome 138 이상 필요",
+      "error",
+    );
+    addLog("Chrome Translator API를 찾을 수 없습니다.");
+    return;
+  }
 
   const settings = readSettings();
   saveSettings();
@@ -385,13 +393,22 @@ async function runTranslation() {
 
   let jaEnTranslator = null;
   let enKoTranslator = null;
+  let jaEnTranslatorPromise = null;
+  let enKoTranslatorPromise = null;
 
   try {
+    // Chrome requires Translator.create() to start directly from the click
+    // gesture whenever a language pack needs to be downloaded.
+    jaEnTranslatorPromise = createTranslator("ja", "en", "일본어 -> 영어");
+    enKoTranslatorPromise = createTranslator("en", "ko", "영어 -> 한국어");
+    jaEnTranslatorPromise.catch(() => {});
+    enKoTranslatorPromise.catch(() => {});
+
     const jaChunks = splitForTranslation(sourceText, settings.chunkSize);
     els.chunkText.textContent = `${jaChunks.length.toLocaleString("ko-KR")}개 청크`;
     addLog(`일본어 원문 ${countChars(sourceText).toLocaleString("ko-KR")}자`);
 
-    jaEnTranslator = await createTranslator("ja", "en", "일본어 -> 영어");
+    jaEnTranslator = await jaEnTranslatorPromise;
     const englishText = await translateChunks(
       jaChunks,
       jaEnTranslator,
@@ -406,7 +423,7 @@ async function runTranslation() {
     els.chunkText.textContent = `${(jaChunks.length + enChunks.length).toLocaleString("ko-KR")}개 청크`;
     addLog(`영어 중간본 ${countChars(englishText).toLocaleString("ko-KR")}자`);
 
-    enKoTranslator = await createTranslator("en", "ko", "영어 -> 한국어");
+    enKoTranslator = await enKoTranslatorPromise;
     await translateChunks(
       enChunks,
       enKoTranslator,
