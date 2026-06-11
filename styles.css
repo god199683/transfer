@@ -48,12 +48,20 @@ button {
 }
 
 .app-shell {
-  width: min(1500px, calc(100vw - 32px));
+  width: auto;
+  max-width: 1500px;
   min-height: calc(100vh - 32px);
-  margin: 16px auto;
+  margin: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+@media (min-width: 1532px) {
+  .app-shell {
+    margin-right: auto;
+    margin-left: auto;
+  }
 }
 
 .topbar,
@@ -80,6 +88,10 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
+}
+
+.brand > div:not(.brand-mark) {
   min-width: 0;
 }
 
@@ -127,6 +139,8 @@ h1 {
 .brand p {
   margin-top: 5px;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .status-pill {
@@ -162,10 +176,63 @@ h1 {
 
 .settings-panel {
   display: grid;
-  grid-template-columns: minmax(240px, 1.5fr) minmax(170px, 0.9fr) repeat(3, minmax(96px, 0.42fr)) auto;
+  grid-template-columns: minmax(320px, 1fr) repeat(2, minmax(110px, 0.18fr));
   gap: 12px;
-  align-items: end;
+  align-items: stretch;
   padding: 14px;
+}
+
+.native-panel {
+  align-items: stretch;
+}
+
+.capability-card {
+  min-width: 0;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-alt);
+}
+
+.capability-card.available {
+  border-color: rgba(0, 124, 116, 0.32);
+  background: rgba(0, 124, 116, 0.07);
+}
+
+.capability-card.error {
+  border-color: rgba(197, 77, 66, 0.34);
+  background: rgba(197, 77, 66, 0.07);
+}
+
+.capability-card strong,
+.capability-card p {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.capability-card strong {
+  margin-top: 3px;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.capability-card p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.label-text {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .field {
@@ -280,6 +347,10 @@ h1 {
   padding: 0 15px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.compact-button {
+  min-width: 90px;
 }
 
 .icon-button {
@@ -422,20 +493,14 @@ h2 {
 
 @media (max-width: 1100px) {
   .settings-panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .endpoint-field,
-  .key-field {
-    grid-column: span 3;
+    grid-template-columns: minmax(0, 1fr) repeat(2, minmax(120px, 0.3fr));
   }
 }
 
 @media (max-width: 760px) {
   .app-shell {
-    width: min(100vw - 20px, 1500px);
     min-height: calc(100vh - 20px);
-    margin: 10px auto;
+    margin: 10px;
   }
 
   .topbar,
@@ -462,9 +527,9 @@ h2 {
     gap: 10px;
   }
 
-  .endpoint-field,
-  .key-field {
-    grid-column: auto;
+  .capability-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .command-group {
@@ -493,12 +558,27 @@ h2 {
 @media (max-width: 460px) {
   .brand {
     align-items: flex-start;
+    gap: 10px;
   }
 
   .brand-mark {
     width: 42px;
     height: 42px;
     flex-basis: 42px;
+  }
+
+  h1 {
+    font-size: 1.08rem;
+  }
+
+  .brand p {
+    max-width: 24ch;
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .capability-card p {
+    max-width: 32ch;
   }
 
   .command-group {

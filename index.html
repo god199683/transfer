@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>JP -> EN -> KR Translator</title>
+    <title>Chrome Built-in JP -> EN -> KR Translator</title>
     <meta
       name="description"
-      content="Japanese to English to Korean long text translator"
+      content="Japanese to English to Korean long text translator using Chrome built-in Translator API"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -18,57 +18,39 @@
             <span>文</span>
           </div>
           <div>
-            <h1>JP -> EN -> KR 번역기</h1>
-            <p>10,000자 이상 장문 번역</p>
+            <h1>Chrome 내장 번역기</h1>
+            <p>API 키 없이 Chrome에서 번역</p>
           </div>
         </div>
         <div class="status-pill" aria-live="polite">
           <span class="status-dot" id="statusDot"></span>
-          <span id="statusText">대기</span>
+          <span id="statusText">확인 중</span>
         </div>
       </header>
 
-      <section class="settings-panel" aria-label="번역 설정">
-        <label class="field endpoint-field">
-          <span>API 엔드포인트</span>
-          <input
-            id="endpointInput"
-            type="url"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="https://libretranslate.com"
-          />
-        </label>
-
-        <label class="field key-field">
-          <span>API 키</span>
-          <input
-            id="apiKeyInput"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="선택"
-          />
-        </label>
+      <section class="settings-panel native-panel" aria-label="번역 설정">
+        <div class="capability-card" id="capabilityCard">
+          <div>
+            <span class="label-text">번역 엔진</span>
+            <strong id="engineText">Chrome Translator API 확인 중</strong>
+            <p id="engineHint">데스크톱 Chrome 138 이상 필요</p>
+          </div>
+          <button class="button secondary-button compact-button" id="checkButton" type="button">
+            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            확인
+          </button>
+        </div>
 
         <label class="field small-field">
           <span>청크</span>
-          <input id="chunkSizeInput" type="number" min="500" max="5000" step="100" />
+          <input id="chunkSizeInput" type="number" min="300" max="4000" step="100" />
         </label>
 
         <label class="field small-field">
           <span>대기(ms)</span>
           <input id="delayInput" type="number" min="0" max="5000" step="50" />
-        </label>
-
-        <label class="field small-field">
-          <span>재시도</span>
-          <input id="retryInput" type="number" min="0" max="5" step="1" />
-        </label>
-
-        <label class="toggle-field">
-          <input id="saveKeyInput" type="checkbox" />
-          <span>키 저장</span>
         </label>
       </section>
 
