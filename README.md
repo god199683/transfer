@@ -1,34 +1,47 @@
-# Chrome Built-in JP -> EN -> KR Translator
+# Local Light Novel Translator
 
-GitHub Pages에서 바로 배포할 수 있는 정적 번역기입니다. 일본어 원문을 청크로 나눠 Chrome 내장 Translator API로 `ja -> en`, `en -> ko` 순서로 번역합니다.
+외부 번역 API 없이 PC의 Ollama 모델로 일본어·영어 원문을 한국어 라이트노벨 문체로 번역하는 로컬 웹앱입니다.
+
+## 준비
+
+1. Ollama를 설치합니다.
+2. 번역에 사용할 모델을 받습니다.
+
+```powershell
+ollama pull qwen3:8b
+```
+
+3. 앱을 실행합니다.
+
+```powershell
+npm start
+```
+
+4. 브라우저에서 `http://localhost:4173`을 엽니다.
 
 ## 특징
 
-- 별도 번역 API 키가 필요 없습니다.
-- 별도 번역 서버를 운영하지 않습니다.
+- 외부 API 키가 필요 없습니다.
+- 번역 요청은 로컬 PC의 `http://127.0.0.1:11434` Ollama로만 전달됩니다.
+- 사용자가 편집할 수 있는 번역 프롬프트를 시스템 지침으로 사용합니다.
 - 긴 원문을 청크로 나눠 10,000자 이상도 순차 처리합니다.
-- 영어 중간본과 한국어 결과를 함께 확인할 수 있습니다.
 - 붙여넣기 시 연속 줄바꿈을 한 줄바꿈으로 정리합니다.
-- 번역 결과는 원문의 줄바꿈 형식을 유지합니다.
-- 사용자 용어집을 `원문 = 번역명` 형식으로 저장하고 결과에 적용합니다.
+- 번역 결과는 원문의 줄바꿈 형식을 최대한 유지합니다.
+- 사용자 용어집을 `원문 = 번역명` 형식으로 저장하고 번역 지침과 결과 후처리에 적용합니다.
 - 번역 후 일본어 가나가 남아 있으면 로그에 검수 경고를 표시합니다.
 
-## 브라우저 조건
+## 모델 추천
 
-Chrome 내장 Translator API가 필요합니다.
+- 기본값: `qwen3:8b`
+- 더 빠른 모델: `qwen3:4b`
+- 더 좋은 품질: `qwen3:14b` 이상
 
-- 데스크톱 Chrome 138 이상 권장
-- 모바일 브라우저 미지원
-- 첫 사용 시 Chrome이 언어팩을 다운로드할 수 있습니다.
+## 환경 변수
 
-## GitHub Pages 배포
+Ollama 주소나 앱 포트를 바꾸고 싶으면 다음처럼 실행합니다.
 
-1. 저장소에 `index.html`, `styles.css`, `app.js`, `.nojekyll`을 커밋합니다.
-2. GitHub 저장소에서 `Settings -> Pages`로 이동합니다.
-3. `Deploy from a branch`를 선택하고 `main` 브랜치의 `/root`를 선택합니다.
-
-배포 후 주소는 보통 `https://god199683.github.io/transfer/`입니다.
-
-## 참고
-
-이 앱은 Chrome의 브라우저 내장 번역 기능에 의존합니다. 지원되지 않는 브라우저에서는 번역 버튼이 비활성화됩니다.
+```powershell
+$env:OLLAMA_HOST="http://127.0.0.1:11434"
+$env:PORT="4173"
+npm start
+```
