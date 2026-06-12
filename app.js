@@ -3,6 +3,7 @@ const STORAGE_KEY = "chrome-jp-en-kr-translator-settings";
 const DEFAULT_SETTINGS = {
   chunkSize: 1800,
   delay: 100,
+  glossary: "",
 };
 
 const LANGUAGE_PAIRS = [
@@ -17,6 +18,7 @@ const els = {
   checkButton: document.querySelector("#checkButton"),
   chunkSize: document.querySelector("#chunkSizeInput"),
   delay: document.querySelector("#delayInput"),
+  glossary: document.querySelector("#glossaryInput"),
   source: document.querySelector("#sourceText"),
   english: document.querySelector("#englishText"),
   korean: document.querySelector("#koreanText"),
@@ -56,6 +58,7 @@ function readSettings() {
   return {
     chunkSize: clampNumber(els.chunkSize.value, 300, 4000, DEFAULT_SETTINGS.chunkSize),
     delay: clampNumber(els.delay.value, 0, 5000, DEFAULT_SETTINGS.delay),
+    glossary: els.glossary.value,
   };
 }
 
@@ -67,6 +70,7 @@ function hydrateSettings() {
   const settings = loadSettings();
   els.chunkSize.value = settings.chunkSize;
   els.delay.value = settings.delay;
+  els.glossary.value = settings.glossary;
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -130,6 +134,7 @@ function setRunning(nextRunning) {
   els.checkButton.disabled = nextRunning;
   els.chunkSize.disabled = nextRunning;
   els.delay.disabled = nextRunning;
+  els.glossary.disabled = nextRunning;
 }
 
 function getTranslatorApi() {
@@ -198,24 +203,23 @@ async function checkTranslatorSupport({ log = false } = {}) {
 
 function splitForTranslation(text, limit) {
   const normalized = text.replace(/\r\n?/g, "\n");
-  const blocks = normalized.split(/(\n{2,})/);
+  const tokens = normalized.match(/[^\n]+|\n+/g) || [];
   const chunks = [];
 
-  for (const block of blocks) {
-    if (!block) continue;
-    if (/^\n{2,}$/.test(block)) {
+  for (const token of tokens) {
+    if (/^\n+$/.test(token)) {
       if (chunks.length > 0) {
-        chunks[chunks.length - 1].suffix += block;
+        chunks[chunks.length - 1].suffix += token;
       }
       continue;
     }
 
-    const pieces = sliceBlock(block, limit);
+    const pieces = sliceBlock(token, limit);
     pieces.forEach((piece, index) => {
       const isLastPiece = index === pieces.length - 1;
       chunks.push({
         text: piece,
-        suffix: isLastPiece ? "" : "\n",
+        suffix: isLastPiece ? "" : " ",
       });
     });
   }
@@ -269,6 +273,56 @@ function findBreakPoint(text, limit) {
   }
 
   return best > 0 ? best : limit;
+}
+
+function normalizePastedText(text) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t]*\n[ \t]*(?:\n[ \t]*)+/g, "\n")
+    .replace(/^\n+|\n+$/g, "");
+}
+
+function handleSourcePaste(event) {
+  const pasted = event.clipboardData?.getData("text");
+  if (typeof pasted !== "string") return;
+
+  event.preventDefault();
+  const normalized = normalizePastedText(pasted);
+  const start = els.source.selectionStart;
+  const end = els.source.selectionEnd;
+  els.source.setRangeText(normalized, start, end, "end");
+  els.source.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function parseGlossary(text) {
+  return text
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"))
+    .map((line) => {
+      const match = line.match(/^(.+?)\s*=\s*(.+)$/);
+      if (!match) return null;
+      return {
+        source: match[1].trim(),
+        target: match[2].trim(),
+      };
+    })
+    .filter((entry) => entry?.source && entry?.target);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function applyGlossary(text, entries) {
+  return entries.reduce((output, entry) => {
+    return output.replace(new RegExp(escapeRegExp(entry.source), "g"), entry.target);
+  }, text);
+}
+
+function hasJapaneseKana(text) {
+  return /[\u3040-\u30ff]/.test(text);
 }
 
 async function createTranslator(sourceLanguage, targetLanguage, label) {
@@ -381,6 +435,7 @@ async function runTranslation() {
   }
 
   const settings = readSettings();
+  const glossaryEntries = parseGlossary(settings.glossary);
   saveSettings();
   activeController = new AbortController();
   setRunning(true);
@@ -424,7 +479,7 @@ async function runTranslation() {
     addLog(`영어 중간본 ${countChars(englishText).toLocaleString("ko-KR")}자`);
 
     enKoTranslator = await enKoTranslatorPromise;
-    await translateChunks(
+    const koreanText = await translateChunks(
       enChunks,
       enKoTranslator,
       "en",
@@ -433,6 +488,16 @@ async function runTranslation() {
       50,
       settings,
     );
+
+    if (glossaryEntries.length > 0) {
+      els.korean.value = applyGlossary(koreanText, glossaryEntries);
+      updateCounts();
+      addLog(`용어집 ${glossaryEntries.length.toLocaleString("ko-KR")}개 적용`);
+    }
+
+    if (hasJapaneseKana(els.korean.value)) {
+      addLog("검수: 한국어 결과에 일본어 가나가 남아 있습니다.");
+    }
 
     setProgress(100, "완료");
     setStatus("완료", "idle");
@@ -534,7 +599,7 @@ function clearAll() {
 }
 
 function bindEvents() {
-  [els.chunkSize, els.delay].forEach((el) => {
+  [els.chunkSize, els.delay, els.glossary].forEach((el) => {
     el.addEventListener("change", () => {
       saveSettings();
       updateChunkCount();
@@ -545,6 +610,7 @@ function bindEvents() {
     updateCounts();
     updateChunkCount();
   });
+  els.source.addEventListener("paste", handleSourcePaste);
 
   els.checkButton.addEventListener("click", () => checkTranslatorSupport({ log: true }));
   els.translateButton.addEventListener("click", runTranslation);

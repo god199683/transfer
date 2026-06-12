@@ -259,10 +259,28 @@ h1 {
   outline: none;
 }
 
+.field textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 11px;
+  line-height: 1.45;
+  outline: none;
+}
+
 .field input:focus,
+.field textarea:focus,
 .text-box:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(0, 124, 116, 0.14);
+}
+
+.glossary-field {
+  grid-column: 1 / -1;
 }
 
 .toggle-field {
