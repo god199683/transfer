@@ -1,19 +1,46 @@
-const STORAGE_KEY = "open-source-long-translator-settings";
+const STORAGE_KEY = "narou-long-translator-settings-v2";
 
 const DEFAULT_SETTINGS = {
-  endpoint: "https://libretranslate.com",
+  provider: "azure",
+  endpoint: "",
   apiKey: "",
+  sourceUrl: "https://ncode.syosetu.com/n7031bs/",
   sourceLang: "ja",
-  route: "pivot",
-  chunkSize: 1600,
-  requestSize: 3000,
-  delay: 700,
+  route: "direct",
+  chunkSize: 5000,
+  requestSize: 45000,
+  delay: 0,
   glossary: "",
 };
 
+const PROVIDER_DEFAULTS = {
+  azure: {
+    endpoint: "",
+    chunkSize: 5000,
+    requestSize: 45000,
+    delay: 0,
+  },
+  mymemory: {
+    endpoint: "https://api.mymemory.translated.net",
+    chunkSize: 100,
+    requestSize: 430,
+    delay: 300,
+  },
+  libretranslate: {
+    endpoint: "https://libretranslate.com",
+    chunkSize: 1600,
+    requestSize: 3000,
+    delay: 700,
+  },
+};
+
 const els = {
+  providerInput: document.querySelector("#providerInput"),
   endpointInput: document.querySelector("#endpointInput"),
+  endpointLabel: document.querySelector("#endpointLabel"),
   apiKeyInput: document.querySelector("#apiKeyInput"),
+  authLabel: document.querySelector("#authLabel"),
+  sourceUrlInput: document.querySelector("#sourceUrlInput"),
   sourceLangInput: document.querySelector("#sourceLangInput"),
   routeInput: document.querySelector("#routeInput"),
   chunkSizeInput: document.querySelector("#chunkSizeInput"),
@@ -32,6 +59,7 @@ const els = {
   stageText: document.querySelector("#stageText"),
   progressText: document.querySelector("#progressText"),
   progressBar: document.querySelector("#progressBar"),
+  fetchUrlButton: document.querySelector("#fetchUrlButton"),
   translateButton: document.querySelector("#translateButton"),
   cancelButton: document.querySelector("#cancelButton"),
   clearButton: document.querySelector("#clearButton"),
@@ -72,33 +100,47 @@ function saveSettings() {
 }
 
 function hydrateSettings() {
+  els.providerInput.value = state.settings.provider;
   els.endpointInput.value = state.settings.endpoint;
   els.apiKeyInput.value = state.settings.apiKey;
+  els.sourceUrlInput.value = state.settings.sourceUrl;
   els.sourceLangInput.value = state.settings.sourceLang;
   els.routeInput.value = state.settings.route;
   els.chunkSizeInput.value = String(state.settings.chunkSize);
   els.requestSizeInput.value = String(state.settings.requestSize);
   els.delayInput.value = String(state.settings.delay);
   els.glossaryInput.value = state.settings.glossary;
+  updateProviderUi(state.settings.provider);
 }
 
 function readSettings() {
+  const provider = els.providerInput.value;
+  const defaults = PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.azure;
+  const minChunk = provider === "mymemory" ? 50 : 300;
+  const maxChunk = provider === "azure" ? 20000 : 5000;
+  const minRequest = provider === "mymemory" ? 100 : 500;
+  const maxRequest = provider === "azure" ? 50000 : 8000;
+
   return {
-    endpoint: normalizeEndpoint(els.endpointInput.value || DEFAULT_SETTINGS.endpoint),
+    provider,
+    endpoint: normalizeEndpoint(els.endpointInput.value || defaults.endpoint),
     apiKey: els.apiKeyInput.value.trim(),
+    sourceUrl: els.sourceUrlInput.value.trim(),
     sourceLang: els.sourceLangInput.value,
     route: els.routeInput.value,
-    chunkSize: clampNumber(els.chunkSizeInput.value, 300, 5000, DEFAULT_SETTINGS.chunkSize),
-    requestSize: clampNumber(els.requestSizeInput.value, 500, 8000, DEFAULT_SETTINGS.requestSize),
-    delay: clampNumber(els.delayInput.value, 0, 5000, DEFAULT_SETTINGS.delay),
+    chunkSize: clampNumber(els.chunkSizeInput.value, minChunk, maxChunk, defaults.chunkSize),
+    requestSize: clampNumber(els.requestSizeInput.value, minRequest, maxRequest, defaults.requestSize),
+    delay: clampNumber(els.delayInput.value, 0, 5000, defaults.delay),
     glossary: els.glossaryInput.value,
   };
 }
 
 function bindEvents() {
   [
+    els.providerInput,
     els.endpointInput,
     els.apiKeyInput,
+    els.sourceUrlInput,
     els.sourceLangInput,
     els.routeInput,
     els.chunkSizeInput,
@@ -107,7 +149,9 @@ function bindEvents() {
     els.glossaryInput,
   ].forEach((el) => el.addEventListener("change", saveSettings));
 
+  els.providerInput.addEventListener("change", applyProviderDefaults);
   els.checkButton.addEventListener("click", checkEndpoint);
+  els.fetchUrlButton.addEventListener("click", fetchNarouUrl);
   els.translateButton.addEventListener("click", translateSource);
   els.cancelButton.addEventListener("click", cancelTranslation);
   els.clearButton.addEventListener("click", clearSource);
@@ -128,23 +172,92 @@ async function checkEndpoint() {
   els.languageText.textContent = "확인 중";
 
   try {
+    if (settings.provider === "azure") {
+      requireEndpoint(settings.endpoint);
+      const data = await fetchWorker(settings, "/api/health", { method: "GET" });
+      els.languageText.textContent = data?.ok ? "Azure Worker 연결됨" : "Worker 응답 확인 필요";
+      setStatus(data?.ok ? "ok" : "error", data?.ok ? "연결됨" : "확인 필요");
+      log(data?.message || "Azure Worker 연결을 확인했습니다.", data?.ok ? "ok" : "error");
+      return;
+    }
+
+    if (settings.provider === "mymemory") {
+      await callMyMemoryApi("Hello", "en", "ko", settings, undefined);
+      els.languageText.textContent = settings.apiKey
+        ? "MyMemory 연결됨 / 이메일 한도"
+        : "MyMemory 연결됨 / 익명 한도";
+      setStatus("ok", "연결됨");
+      log("MyMemory API 연결을 확인했습니다.", "ok");
+      return;
+    }
+
     const languages = await fetchJson(settings, "/languages", { method: "GET" });
     const codes = Array.isArray(languages) ? languages.map((lang) => lang.code).filter(Boolean) : [];
-    const hasJa = codes.includes("ja");
-    const hasEn = codes.includes("en");
-    const hasKo = codes.includes("ko");
-    const ok = hasJa && hasEn && hasKo;
-
-    els.languageText.textContent = ok
-      ? `지원 확인: ja, en, ko / ${codes.length}개 언어`
-      : `확인 필요: ${codes.slice(0, 12).join(", ") || "언어 목록 없음"}`;
-    setStatus(ok ? "ok" : "error", ok ? "연결됨" : "언어 확인");
-    log(ok ? "API 연결과 언어 목록을 확인했습니다." : "필요 언어가 목록에 없을 수 있습니다.", ok ? "ok" : "error");
+    const ok = codes.includes("ja") && codes.includes("en") && codes.includes("ko");
+    els.languageText.textContent = ok ? `지원 확인: ja, en, ko / ${codes.length}개 언어` : "필요 언어 확인 필요";
+    setStatus(ok ? "ok" : "error", ok ? "연결됨" : "확인 필요");
+    log(ok ? "LibreTranslate 언어 목록을 확인했습니다." : "필요 언어가 목록에 없을 수 있습니다.", ok ? "ok" : "error");
   } catch (error) {
     els.languageText.textContent = "연결 실패";
     setStatus("error", "실패");
     log(formatError(error), "error");
   }
+}
+
+async function fetchNarouUrl() {
+  const settings = readSettings();
+  saveSettings();
+
+  if (settings.provider !== "azure") {
+    log("나로우 URL 불러오기는 Azure Worker에서만 지원합니다.", "error");
+    return;
+  }
+
+  requireEndpoint(settings.endpoint);
+  const url = settings.sourceUrl || DEFAULT_SETTINGS.sourceUrl;
+  if (!url) {
+    log("불러올 나로우 URL을 입력하세요.", "error");
+    return;
+  }
+
+  setStatus("busy", "불러오는 중");
+  setUiRunning(true);
+  clearLog();
+
+  try {
+    const result = await fetchNarouText(settings, url);
+    els.sourceText.value = normalizePastedText(result.text);
+    els.sourceUrlInput.value = result.url || url;
+    updateCounts();
+    setStatus("ok", "불러옴");
+    log(`${result.title || "나로우 본문"}을 불러왔습니다.`, "ok");
+    if (result.indexUrl && result.chapterCount) {
+      log(`목차에서 첫 화를 자동 선택했습니다. 전체 ${result.chapterCount}화로 보입니다.`);
+    }
+  } catch (error) {
+    setStatus("error", "오류");
+    log(formatError(error), "error");
+  } finally {
+    setUiRunning(false);
+  }
+}
+
+async function fetchNarouText(settings, url) {
+  const first = await fetchWorker(settings, `/api/narou?url=${encodeURIComponent(url)}`, { method: "GET" });
+  if (first.kind === "chapter") return first;
+
+  if (first.kind === "index" && first.firstChapterUrl) {
+    const chapter = await fetchWorker(settings, `/api/narou?url=${encodeURIComponent(first.firstChapterUrl)}`, {
+      method: "GET",
+    });
+    return {
+      ...chapter,
+      indexUrl: first.url,
+      chapterCount: first.chapterCount,
+    };
+  }
+
+  throw new Error("나로우 본문을 찾지 못했습니다. 화 URL을 직접 넣어보세요.");
 }
 
 async function translateSource() {
@@ -157,7 +270,10 @@ async function translateSource() {
   const settings = readSettings();
   saveSettings();
 
-  const segmentSize = Math.min(settings.chunkSize, settings.requestSize);
+  const segmentSize =
+    settings.provider === "mymemory"
+      ? Math.min(settings.chunkSize, 100)
+      : Math.min(settings.chunkSize, settings.requestSize);
   const tokens = tokenizeText(source, segmentSize);
   const textTokens = tokens.filter((token) => token.type === "text");
 
@@ -233,7 +349,7 @@ async function translateSource() {
 async function translateMany(texts, source, target, settings, label) {
   const jobs = texts.map((text, index) => ({ text, index })).filter((job) => job.text.trim());
   const results = [...texts];
-  const groups = packJobs(jobs, settings.requestSize);
+  const groups = settings.provider === "mymemory" ? jobs.map((job) => [job]) : packJobs(jobs, settings.requestSize);
 
   for (let index = 0; index < groups.length; index += 1) {
     const group = groups[index];
@@ -287,31 +403,91 @@ async function translateGroup(group, source, target, settings) {
 }
 
 async function callTranslateApi(q, source, target, settings, signal) {
-  const body = {
-    q,
-    source,
-    target,
-    format: "text",
-  };
+  if (settings.provider === "azure") {
+    requireEndpoint(settings.endpoint);
+    const data = await fetchWorker(settings, "/api/translate", {
+      method: "POST",
+      body: {
+        q,
+        source,
+        target,
+      },
+      signal,
+    });
+    return normalizeTranslatedArray(data?.translatedText, q.length);
+  }
 
-  if (settings.apiKey) {
-    body.api_key = settings.apiKey;
+  if (settings.provider === "mymemory") {
+    if (q.length !== 1) {
+      throw new Error("MyMemory는 한 번에 한 조각씩 번역합니다.");
+    }
+    const sourceLang = source === "auto" ? "ja" : source;
+    return [await callMyMemoryApi(q[0], sourceLang, target, settings, signal)];
   }
 
   const data = await fetchJson(settings, "/translate", {
     method: "POST",
-    body,
+    body: {
+      q,
+      source,
+      target,
+      format: "text",
+      ...(settings.apiKey ? { api_key: settings.apiKey } : {}),
+    },
     signal,
   });
+  return normalizeTranslatedArray(data?.translatedText, q.length);
+}
 
-  const translatedText = data.translatedText;
-  if (Array.isArray(translatedText)) {
-    return translatedText.map((item) => String(item ?? ""));
+function normalizeTranslatedArray(value, expectedLength) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? ""));
   }
-  if (typeof translatedText === "string" && q.length === 1) {
-    return [translatedText];
+  if (typeof value === "string" && expectedLength === 1) {
+    return [value];
   }
-  throw new Error("API 응답에서 translatedText를 읽을 수 없습니다.");
+  throw new Error("API 응답에서 번역문을 읽을 수 없습니다.");
+}
+
+async function callMyMemoryApi(text, source, target, settings, signal) {
+  const params = new URLSearchParams({
+    q: text,
+    langpair: `${source}|${target}`,
+    mt: "1",
+  });
+
+  if (settings.apiKey) {
+    params.set("de", settings.apiKey);
+  }
+
+  const response = await fetch(`${settings.endpoint}/get?${params.toString()}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.responseDetails || `${response.status} ${response.statusText}`);
+  }
+
+  if (data?.responseStatus && Number(data.responseStatus) >= 400) {
+    throw new Error(data.responseDetails || "MyMemory API 오류");
+  }
+
+  const translated = data?.responseData?.translatedText;
+  if (typeof translated !== "string") {
+    throw new Error("MyMemory 응답에서 번역문을 읽을 수 없습니다.");
+  }
+  return translated;
+}
+
+async function fetchWorker(settings, path, options = {}) {
+  return fetchJson(
+    settings,
+    path,
+    options
+  );
 }
 
 async function fetchJson(settings, path, options = {}) {
@@ -577,9 +753,57 @@ function updateCounts() {
   els.sourceCount.textContent = `${sourceLength.toLocaleString("ko-KR")}자`;
   els.koreanCount.textContent = `${outputLength.toLocaleString("ko-KR")}자`;
 
-  const chunkSize = clampNumber(els.chunkSizeInput.value, 300, 5000, DEFAULT_SETTINGS.chunkSize);
-  const chunks = sourceLength ? tokenizeText(els.sourceText.value, chunkSize).filter((token) => token.type === "text") : [];
+  const settings = readSettings();
+  const segmentSize =
+    settings.provider === "mymemory"
+      ? Math.min(settings.chunkSize, 100)
+      : Math.min(settings.chunkSize, settings.requestSize);
+  const chunks = sourceLength ? tokenizeText(els.sourceText.value, segmentSize).filter((token) => token.type === "text") : [];
   els.chunkText.textContent = `${chunks.length.toLocaleString("ko-KR")}개 조각`;
+}
+
+function applyProviderDefaults() {
+  const provider = els.providerInput.value;
+  const defaults = PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.azure;
+  els.endpointInput.value = defaults.endpoint;
+  els.chunkSizeInput.value = String(defaults.chunkSize);
+  els.requestSizeInput.value = String(defaults.requestSize);
+  els.delayInput.value = String(defaults.delay);
+  updateProviderUi(provider);
+  saveSettings();
+  updateCounts();
+}
+
+function updateProviderUi(provider) {
+  if (provider === "azure") {
+    els.endpointLabel.textContent = "Worker URL";
+    els.endpointInput.placeholder = "https://your-worker.your-name.workers.dev";
+    els.authLabel.textContent = "인증";
+    els.apiKeyInput.type = "text";
+    els.apiKeyInput.value = "";
+    els.apiKeyInput.placeholder = "Azure 키는 Worker에만 저장";
+    els.apiKeyInput.disabled = true;
+    els.languageText.textContent = els.endpointInput.value ? "Worker 확인 가능" : "Worker URL 필요";
+    return;
+  }
+
+  els.apiKeyInput.disabled = false;
+  els.endpointLabel.textContent = "API 주소";
+
+  if (provider === "mymemory") {
+    els.endpointInput.placeholder = "https://api.mymemory.translated.net";
+    els.authLabel.textContent = "이메일";
+    els.apiKeyInput.type = "text";
+    els.apiKeyInput.placeholder = "무료 한도 상승용 이메일";
+    els.languageText.textContent = "키 없이도 사용 가능";
+    return;
+  }
+
+  els.endpointInput.placeholder = "https://libretranslate.com";
+  els.authLabel.textContent = "API 키";
+  els.apiKeyInput.type = "password";
+  els.apiKeyInput.placeholder = "필요한 인스턴스만 입력";
+  els.languageText.textContent = "언어 목록 미확인";
 }
 
 function updateProgress(value, stage) {
@@ -593,8 +817,9 @@ function setUiRunning(isRunning) {
   els.translateButton.disabled = isRunning;
   els.cancelButton.disabled = !isRunning;
   [
+    els.providerInput,
     els.endpointInput,
-    els.apiKeyInput,
+    els.sourceUrlInput,
     els.sourceLangInput,
     els.routeInput,
     els.chunkSizeInput,
@@ -602,12 +827,16 @@ function setUiRunning(isRunning) {
     els.delayInput,
     els.glossaryInput,
     els.checkButton,
+    els.fetchUrlButton,
     els.loadButton,
     els.normalizeButton,
     els.clearButton,
   ].forEach((el) => {
     el.disabled = isRunning;
   });
+  if (!isRunning) {
+    updateProviderUi(els.providerInput.value);
+  }
 }
 
 function setStatus(kind, text) {
@@ -632,7 +861,13 @@ function clearLog() {
 
 function normalizeEndpoint(value) {
   const trimmed = String(value).trim().replace(/\/+$/, "");
-  return trimmed || DEFAULT_SETTINGS.endpoint;
+  return trimmed;
+}
+
+function requireEndpoint(endpoint) {
+  if (!endpoint) {
+    throw new Error("Azure Worker URL을 먼저 입력하세요.");
+  }
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -669,7 +904,7 @@ function sleep(ms, signal) {
 function formatError(error) {
   const message = error?.message || String(error);
   if (message.includes("Failed to fetch")) {
-    return "API에 연결하지 못했습니다. 주소, CORS 허용, API 키를 확인하세요.";
+    return "API에 연결하지 못했습니다. 주소, CORS 허용, Worker 배포 상태를 확인하세요.";
   }
   if (message.includes("429")) {
     return "API 요청이 너무 빠릅니다. 대기 시간을 늘리거나 요청 크기를 줄이세요.";

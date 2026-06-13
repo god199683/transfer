@@ -1,8 +1,15 @@
-# Open Source Long Translator
+# Narou Long Translator
 
-LibreTranslate 호환 API를 사용하는 GitHub Pages용 장문 번역기입니다.
+`https://ncode.syosetu.com/n7031bs/` 같은 나로우 장편 웹소설을 번역하기 위한 GitHub Pages 웹앱입니다.
 
-기본 흐름은 `일본어 -> 영어 -> 한국어`이며, 긴 원문은 줄바꿈을 보존하면서 여러 조각으로 나눠 처리합니다. 그래서 10,000자 이상 텍스트도 API 제한에 맞춰 순차 번역할 수 있습니다.
+기본 추천 조합은 `GitHub Pages + Cloudflare Worker + Azure Translator F0`입니다.
+
+- 설치 없음
+- 로컬 서버 없음
+- Azure Translator F0 월 2,000,000자 무료
+- Azure Translator는 한 요청에 최대 50,000자까지 처리 가능
+- 나로우 목차 URL을 넣으면 첫 화를 자동으로 불러오기
+- 화 URL을 넣으면 본문을 불러온 뒤 번역
 
 ## 접속
 
@@ -10,39 +17,38 @@ LibreTranslate 호환 API를 사용하는 GitHub Pages용 장문 번역기입니
 https://god199683.github.io/transfer/
 ```
 
-## API
+## 왜 Azure인가
 
-기본 API 주소는 다음 값입니다.
+MyMemory는 설치 없이 바로 쓸 수 있지만 이메일을 넣어도 하루 50,000자라 장편 한 작품에는 부족합니다. DeepL API Free는 품질은 좋지만 월 500,000자이고, 브라우저 직접 호출이 CORS로 막힙니다.
+
+Azure Translator F0는 월 2,000,000자라 나로우 장편을 여러 화씩 번역하기에 가장 현실적입니다. API 키는 GitHub Pages에 넣지 않고 Cloudflare Worker에만 저장합니다.
+
+## 준비
+
+1. Azure Portal에서 Translator 리소스를 만듭니다.
+2. 가격 계층은 `F0`를 선택합니다.
+3. `Keys and Endpoint`에서 Key와 Region을 확인합니다.
+4. Cloudflare Workers에서 새 Worker를 만듭니다.
+5. `cloudflare-worker/worker.js` 내용을 붙여넣습니다.
+6. Worker 환경 변수 또는 Secret을 설정합니다.
 
 ```text
-https://libretranslate.com
+AZURE_TRANSLATOR_KEY=Azure에서 받은 Key
+AZURE_TRANSLATOR_REGION=Azure 리소스 Region
+ALLOWED_ORIGIN=https://god199683.github.io
 ```
 
-공식 호스팅 인스턴스는 API 키가 필요할 수 있습니다. 직접 운영하는 LibreTranslate 서버나 키가 필요 없는 호환 인스턴스를 쓰려면 화면의 `API 주소`만 바꾸면 됩니다.
+7. Worker를 배포하고 URL을 복사합니다.
+8. 번역기 화면의 `Worker URL`에 붙여넣고 `확인`을 누릅니다.
 
-LibreTranslate 문서에 따르면 `/translate`는 `q`, `source`, `target`, `format`, `api_key` 값을 받으며, 자체 호스팅 인스턴스에서는 API 키가 선택 사항일 수 있습니다.
+## 사용
 
-## 기능
+1. `나로우 URL`에 `https://ncode.syosetu.com/n7031bs/` 또는 화 URL을 넣습니다.
+2. `URL` 버튼을 누릅니다.
+3. 원문이 들어오면 `번역`을 누릅니다.
 
-- 일본어 원문을 영어로 번역한 뒤 한국어로 번역
-- 영어 원문은 바로 한국어 번역 가능
-- 10,000자 이상 장문 분할 처리
-- 줄바꿈 보존
-- 붙여넣기 시 과한 빈 줄 정리
-- `원문 = 번역명` 형식의 간단 용어집
-- TXT 불러오기, 복사, TXT 저장
-- API 요청 크기와 요청 간 대기 시간 조절
+목차 URL이면 첫 화를 자동으로 불러옵니다. 다음 화는 URL 끝 숫자를 바꿔서 불러오면 됩니다.
 
-## 배포
+## 참고
 
-이 저장소는 GitHub Pages 배포 워크플로를 포함합니다.
-
-1. `main` 브랜치에 push합니다.
-2. GitHub 저장소의 `Settings -> Pages`에서 GitHub Actions 배포를 사용합니다.
-3. Actions가 끝나면 위 접속 주소로 열 수 있습니다.
-
-## 주의
-
-공개 API는 글자 수, 속도, CORS, API 키 제한이 있을 수 있습니다. 번역이 멈추면 `요청` 값을 줄이고 `대기` 값을 늘리세요.
-
-오픈소스 기계번역 API는 프롬프트를 이해하는 LLM이 아니므로, 라이트노벨식 윤문 품질은 모델과 언어쌍 성능에 크게 좌우됩니다.
+영어 경유 번역은 `일본어 -> 영어 -> 한국어`로 두 번 번역하므로 무료 사용량도 두 배로 소모합니다. Azure에서는 기본값인 `바로 한국어`를 먼저 권장합니다.
